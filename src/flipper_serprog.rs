@@ -261,6 +261,9 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
     furi_thread_join(state.worker_thread);
     furi_thread_free(state.worker_thread);
 
+    furi_stream_buffer_free(state.rx_stream);
+    furi_stream_buffer_free(state.tx_stream);
+
     furi_hal_spi_bus_handle_deinit(
         &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
     );
