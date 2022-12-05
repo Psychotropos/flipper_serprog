@@ -492,7 +492,7 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
             }
             _ => {
                 data[0] = S_NAK;
-                return 0;
+                return 1;
             }
         })();
 
