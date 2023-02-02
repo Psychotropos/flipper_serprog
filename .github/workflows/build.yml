@@ -19,7 +19,7 @@ jobs:
         override: true
         target: thumbv7em-none-eabihf
 
-    - name: Build binary 
+    - name: Build binary
       uses: actions-rs/cargo@v1
       id: build_library
       with:
