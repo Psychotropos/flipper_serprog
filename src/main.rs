@@ -1,13 +1,22 @@
 #![crate_type = "staticlib"]
 #![no_main]
 #![no_std]
+
 use core::ffi::*;
 use core::mem::*;
 use core::time::Duration;
 
-use flipper0::alloc::string::String;
-use flipper0::alloc::vec::Vec;
-use flipper0::ffi::*;
+extern crate flipperzero_rt;
+extern crate flipperzero_alloc;
+extern crate alloc;
+
+use alloc::string::String;
+use alloc::vec::Vec;
+use flipperzero_sys::*;
+use flipperzero_rt::{entry, manifest};
+
+manifest!(name = "flipper_serprog", app_version = 1);
+entry!(main);
 
 struct SerprogData {
     view_port: *mut ViewPort,
@@ -20,8 +29,8 @@ struct SerprogData {
     running: bool,
 }
 
-// Temphack - flipper0-sys bindgen cannot seem to find this for some reason.
-const RECORD_CLI: &'static str = "cli\0";
+const RECORD_GUI: *const c_char = c_string!("gui");
+const RECORD_CLI: *const c_char = c_string!("cli");
 
 #[allow(dead_code, non_camel_case_types)]
 const S_ACK: u8 = 0x06;
@@ -127,8 +136,13 @@ const WORKER_ALL_CDC_EVENTS: u32 = WorkerEvents::CdcRx as u32
     | WorkerEvents::CdcTxStream as u32
     | WorkerEvents::CdcTx as u32;
 
-#[no_mangle]
-pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
+fn main(args: *mut u8) -> i32 {
+    unsafe {
+        _entry(args)
+    }
+}
+
+unsafe fn _entry(_args: *mut u8) -> i32 {
     let mut state = SerprogData {
         view_port: view_port_alloc(),
         event_queue: furi_message_queue_alloc(8, size_of::<InputEvent>() as u32)
@@ -153,9 +167,9 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
     furi_hal_usb_unlock();
 
     if USB_VCP_CHANNEL == 0 {
-        let cli = furi_record_open(RECORD_CLI.as_ptr() as *const c_char) as *mut Cli;
+        let cli = furi_record_open(RECORD_CLI) as *mut Cli;
         cli_session_close(cli);
-        furi_record_close(RECORD_CLI.as_ptr() as *const c_char);
+        furi_record_close(RECORD_CLI);
     }
 
     if !furi_hal_usb_set_config(
@@ -205,12 +219,12 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
     );
     view_port_input_callback_set(state.view_port, Some(input_callback), state.event_queue);
 
-    let gui: *mut Gui = furi_record_open(RECORD_GUI.as_ptr() as *const c_char) as *mut Gui;
-    gui_add_view_port(gui, state.view_port, GuiLayer::GuiLayerFullscreen);
+    let gui: *mut Gui = furi_record_open(RECORD_GUI) as *mut Gui;
+    gui_add_view_port(gui, state.view_port, GuiLayer_GuiLayerFullscreen);
 
     let mut event = InputEvent {
-        type_: InputType::InputTypeMAX,
-        key: InputKey::InputKeyBack,
+        type_: InputType_InputTypeMAX,
+        key: InputKey_InputKeyBack,
         sequence: 0,
     };
 
@@ -219,12 +233,13 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
             state.event_queue,
             &mut event as *mut InputEvent as *mut c_void,
             100,
-        ) == FuriStatus::FuriStatusOk
+        ) == FuriStatus_FuriStatusOk
         {
-            if event.type_ == InputType::InputTypePress || event.type_ == InputType::InputTypeRepeat
+            if event.type_ == InputType_InputTypePress || event.type_ == InputType_InputTypeRepeat
             {
+                #[allow(non_upper_case_globals)]
                 match event.key {
-                    InputKey::InputKeyBack => {
+                    InputKey_InputKeyBack => {
                         state.running = false;
                         break;
                     }
@@ -246,9 +261,9 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
     }
 
     if USB_VCP_CHANNEL == 0 {
-        let cli = furi_record_open(RECORD_CLI.as_ptr() as *const c_char) as *mut Cli;
+        let cli = furi_record_open(RECORD_CLI) as *mut Cli;
         cli_session_open(cli, &mut cli_vcp as *mut CliSession as *mut c_void);
-        furi_record_close(RECORD_CLI.as_ptr() as *const c_char);
+        furi_record_close(RECORD_CLI);
     }
 
     furi_thread_flags_set(
@@ -273,7 +288,7 @@ pub unsafe extern "C" fn init(_: *mut u8) -> i32 {
     view_port_free(state.view_port);
     furi_message_queue_free(state.event_queue);
 
-    furi_record_close(RECORD_GUI.as_ptr() as *const c_char);
+    furi_record_close(RECORD_GUI);
 
     0
 }
@@ -296,8 +311,7 @@ pub unsafe extern "C" fn input_callback(
 }
 
 pub unsafe extern "C" fn draw_callback(canvas: *mut Canvas, _context: *mut c_void) {
-    const MESSAGE: &[u8] = b"SPI flasher\0";
-    canvas_draw_str(canvas, 39, 31, MESSAGE.as_ptr() as *const i8);
+    canvas_draw_str(canvas, 39, 31, c_string!("SPI flasher"));
 }
 
 unsafe fn usb_process_packet(state: &mut SerprogData) {

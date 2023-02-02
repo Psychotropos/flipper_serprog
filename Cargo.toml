@@ -2,19 +2,18 @@
 name = "flipper_serprog"
 version = "0.1.0"
 edition = "2021"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 
-[lib]
+[[bin]]
 name = "flipper_serprog"
-path = "src/flipper_serprog.rs"
-crate-type = ["staticlib"]
 bench = false
 test = false
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-
 [dependencies]
-flipper0-sys = { git = "https://github.com/boozook/flipper0.git", branch = "master", default-features = false, features = ["allocator-global", "oom-global", "panic", "prebuild" ]}
-flipper0 = { git = "https://github.com/boozook/flipper0.git", branch = "master", default-features = false }
+flipperzero = "*"
+flipperzero-alloc = "*"
+flipperzero-rt = "*"
+flipperzero-sys = "*"
