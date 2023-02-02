@@ -15,7 +15,7 @@ use alloc::vec::Vec;
 use flipperzero_sys::*;
 use flipperzero_rt::{entry, manifest};
 
-manifest!(name = "flipper_serprog", app_version = 1);
+manifest!(name = "Serial Flash Programmer", app_version = 1, has_icon = true, icon = "flipper_serprog.icon");
 entry!(main);
 
 struct SerprogData {

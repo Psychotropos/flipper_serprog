@@ -1,9 +1,0 @@
-App(
-    appid="flipper_serprog",
-    name="SPI Flasher",
-    entry_point="init",
-    sources=["libflipper_serprog.a"],
-    requires=["gui", "dialogs"],
-    fap_category="Tools",
-    apptype=FlipperAppType.EXTERNAL,
-)
