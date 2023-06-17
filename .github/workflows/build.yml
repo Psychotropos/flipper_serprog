@@ -1,9 +1,6 @@
 name: Build FAP
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
 
 jobs:
   build:
@@ -29,31 +26,36 @@ jobs:
         command: build
         args: --release
 
-    - name: Tag Release
-      id: tag_release
-      uses: mathieudutour/github-tag-action@v6.1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag_release.outputs.new_tag }}
-        release_name: Release ${{ steps.tag_release.outputs.new_tag }}
-        body: ${{ steps.tag_release.outputs.changelog }}
-        draft: false
-        prerelease: false
+    steps:
+      - name: Tag Release
+        id: tag_release
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload Release Asset
-      id: upload_release_asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./target/thumbv7em-none-eabihf/release/flipper_serprog
-        asset_name: flipper_serprog.fap
-        asset_content_type: application/octet-stream
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_release.outputs.new_tag }}
+          release_name: Release ${{ steps.tag_release.outputs.new_tag }}
+          body: ${{ steps.tag_release.outputs.changelog }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload_release_asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/thumbv7em-none-eabihf/release/flipper_serprog
+          asset_name: flipper_serprog.fap
+          asset_content_type: application/octet-stream
