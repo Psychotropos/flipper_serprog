@@ -13,7 +13,7 @@ bench = false
 test = false
 
 [dependencies]
-flipperzero = "*"
-flipperzero-alloc = "*"
-flipperzero-rt = "*"
-flipperzero-sys = "*"
+flipperzero = "0.10.0"
+flipperzero-alloc = "0.10.0"
+flipperzero-rt = "0.10.0"
+flipperzero-sys = "0.10.0"
