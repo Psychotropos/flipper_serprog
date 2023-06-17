@@ -222,19 +222,16 @@ unsafe fn _entry(_args: *mut u8) -> i32 {
     let gui: *mut Gui = furi_record_open(RECORD_GUI) as *mut Gui;
     gui_add_view_port(gui, state.view_port, GuiLayer_GuiLayerFullscreen);
 
-    let mut event = InputEvent {
-        type_: InputType_InputTypeMAX,
-        key: InputKey_InputKeyBack,
-        sequence: 0,
-    };
-
+    let mut event: MaybeUninit<InputEvent> = MaybeUninit::uninit();
+    
     while state.running {
         if furi_message_queue_get(
             state.event_queue,
-            &mut event as *mut InputEvent as *mut c_void,
+            event.as_mut_ptr() as *mut InputEvent as *mut c_void,
             100,
         ) == FuriStatus_FuriStatusOk
         {
+            let event = event.assume_init();
             if event.type_ == InputType_InputTypePress || event.type_ == InputType_InputTypeRepeat
             {
                 #[allow(non_upper_case_globals)]
