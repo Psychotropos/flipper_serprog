@@ -31,7 +31,6 @@ jobs:
       uses: mathieudutour/github-tag-action@v6.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-      if: github.ref == 'refs/heads/main'
   
     - name: Create Release
       id: create_release
@@ -44,7 +43,6 @@ jobs:
         body: ${{ steps.tag_release.outputs.changelog }}
         draft: false
         prerelease: false
-      if: github.ref == 'refs/heads/main'
   
     - name: Upload Release Asset
       id: upload_release_asset
@@ -56,4 +54,3 @@ jobs:
         asset_path: ./target/thumbv7em-none-eabihf/release/flipper_serprog
         asset_name: flipper_serprog.fap
         asset_content_type: application/octet-stream
-      if: github.ref == 'refs/heads/main'
