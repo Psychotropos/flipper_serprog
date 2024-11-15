@@ -16,4 +16,4 @@ test = false
 flipperzero = "0.11.0"
 flipperzero-alloc = "0.11.0"
 flipperzero-rt = "0.11.0"
-flipperzero-sys = "0.11.0"
+flipperzero-sys = "0.13.0"
