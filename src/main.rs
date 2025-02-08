@@ -29,8 +29,8 @@ struct SerprogData {
     running: bool,
 }
 
-const RECORD_GUI: *const c_char = c_string!("gui");
-const RECORD_CLI: *const c_char = c_string!("cli");
+const RECORD_GUI: *const c_char = "gui\0".as_ptr();
+const RECORD_CLI: *const c_char = "cli\0".as_ptr();
 
 #[allow(dead_code, non_camel_case_types)]
 const S_ACK: u8 = 0x06;
@@ -60,29 +60,45 @@ enum CR1Bits {
 #[allow(dead_code, non_camel_case_types)]
 // External SPI is on APB2, so the base frequency is 64MHz. The comments reflect this.
 enum PrescalerValues {
-    LL_SPI_BAUDRATEPRESCALER_DIV2 = 0, /* 32MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV4 = CR1Bits::SPI_CR1_BR_0 as u32, /* 16MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV8 = CR1Bits::SPI_CR1_BR_1 as u32, /* 8MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV16 = (CR1Bits::SPI_CR1_BR_1 as u32 | CR1Bits::SPI_CR1_BR_0 as u32), /* 4MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV32 = CR1Bits::SPI_CR1_BR_2 as u32, /* 2MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV64 = (CR1Bits::SPI_CR1_BR_2 as u32 | CR1Bits::SPI_CR1_BR_0 as u32), /* 1MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV128 = (CR1Bits::SPI_CR1_BR_2 as u32 | CR1Bits::SPI_CR1_BR_1 as u32), /* 500KHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV2 = 0,
+    /* 32MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV4 = CR1Bits::SPI_CR1_BR_0 as u32,
+    /* 16MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV8 = CR1Bits::SPI_CR1_BR_1 as u32,
+    /* 8MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV16 = (CR1Bits::SPI_CR1_BR_1 as u32 | CR1Bits::SPI_CR1_BR_0 as u32),
+    /* 4MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV32 = CR1Bits::SPI_CR1_BR_2 as u32,
+    /* 2MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV64 = (CR1Bits::SPI_CR1_BR_2 as u32 | CR1Bits::SPI_CR1_BR_0 as u32),
+    /* 1MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV128 = (CR1Bits::SPI_CR1_BR_2 as u32 | CR1Bits::SPI_CR1_BR_1 as u32),
+    /* 500KHz */
     LL_SPI_BAUDRATEPRESCALER_DIV256 = (CR1Bits::SPI_CR1_BR_2 as u32
         | CR1Bits::SPI_CR1_BR_1 as u32
-        | CR1Bits::SPI_CR1_BR_0 as u32), /* 250KHz */
+        | CR1Bits::SPI_CR1_BR_0 as u32),
+    /* 250KHz */
 }
 
 #[repr(u32)]
 #[allow(dead_code, non_camel_case_types)]
 enum PrescalerValuesInHz {
-    LL_SPI_BAUDRATEPRESCALER_DIV2 = 32000000, /* 32MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV4 = 16000000, /* 16MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV8 = 8000000,  /* 8MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV16 = 4000000, /* 4MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV32 = 2000000, /* 2MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV64 = 1000000, /* 1MHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV128 = 500000, /* 500KHz */
-    LL_SPI_BAUDRATEPRESCALER_DIV256 = 250000, /* 250KHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV2 = 32000000,
+    /* 32MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV4 = 16000000,
+    /* 16MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV8 = 8000000,
+    /* 8MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV16 = 4000000,
+    /* 4MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV32 = 2000000,
+    /* 2MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV64 = 1000000,
+    /* 1MHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV128 = 500000,
+    /* 500KHz */
+    LL_SPI_BAUDRATEPRESCALER_DIV256 = 250000,
+    /* 250KHz */
 }
 
 #[repr(u8)]
@@ -136,17 +152,16 @@ const WORKER_ALL_CDC_EVENTS: u32 = WorkerEvents::CdcRx as u32
     | WorkerEvents::CdcTxStream as u32
     | WorkerEvents::CdcTx as u32;
 
-fn main(args: *mut u8) -> i32 {
+fn main(args: Option<&CStr>) -> i32 {
     unsafe {
         _entry(args)
     }
 }
 
-unsafe fn _entry(_args: *mut u8) -> i32 {
+unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     let mut state = SerprogData {
         view_port: view_port_alloc(),
-        event_queue: furi_message_queue_alloc(8, size_of::<InputEvent>() as u32)
-            as *mut FuriMessageQueue,
+        event_queue: furi_message_queue_alloc(8, size_of::<InputEvent>() as u32),
         trx_thread: 0 as *mut FuriThread,
         worker_thread: 0 as *mut FuriThread,
         rx_stream: furi_stream_buffer_alloc(5 * CDC_DATA_SZ, 1),
@@ -217,26 +232,26 @@ unsafe fn _entry(_args: *mut u8) -> i32 {
         Some(draw_callback),
         state.view_port as *mut c_void,
     );
-    view_port_input_callback_set(state.view_port, Some(input_callback), state.event_queue);
+    view_port_input_callback_set(state.view_port, Some(input_callback), state.event_queue as *mut c_void);
 
     let gui: *mut Gui = furi_record_open(RECORD_GUI) as *mut Gui;
-    gui_add_view_port(gui, state.view_port, GuiLayer_GuiLayerFullscreen);
+    gui_add_view_port(gui, state.view_port, GuiLayerFullscreen);
 
     let mut event: MaybeUninit<InputEvent> = MaybeUninit::uninit();
-    
+
     while state.running {
         if furi_message_queue_get(
             state.event_queue,
-            event.as_mut_ptr() as *mut InputEvent as *mut c_void,
+            event.as_mut_ptr() as *mut c_void,
             100,
-        ) == FuriStatus_FuriStatusOk
+        ) == FuriStatusOk
         {
             let event = event.assume_init();
-            if event.type_ == InputType_InputTypePress || event.type_ == InputType_InputTypeRepeat
+            if event.type_ == InputTypePress || event.type_ == InputTypeRepeat
             {
                 #[allow(non_upper_case_globals)]
                 match event.key {
-                    InputKey_InputKeyBack => {
+                    InputKeyBack => {
                         state.running = false;
                         break;
                     }
@@ -298,17 +313,17 @@ unsafe fn set_spi_baud_rate(handle: &mut FuriHalSpiBusHandle, prescaler_value: u
 
 pub unsafe extern "C" fn input_callback(
     input_event: *mut InputEvent,
-    event_queue: *mut FuriMessageQueue,
+    event_queue: *mut c_void,
 ) {
     furi_message_queue_put(
-        event_queue,
+        event_queue as *mut FuriMessageQueue,
         input_event as *mut c_void,
         FURI_FLAG_WAIT_FOREVER,
     );
 }
 
 pub unsafe extern "C" fn draw_callback(canvas: *mut Canvas, _context: *mut c_void) {
-    canvas_draw_str(canvas, 39, 31, c_string!("SPI flasher"));
+    canvas_draw_str(canvas, 39, 31, "SPI Flasher\0".as_ptr());
 }
 
 unsafe fn usb_process_packet(state: &mut SerprogData) {
@@ -677,8 +692,7 @@ pub unsafe extern "C" fn vcp_on_cdc_control_line(_context: *mut c_void, _state: 
 pub unsafe extern "C" fn vcp_on_line_config(
     _context: *mut c_void,
     _config: *mut usb_cdc_line_coding,
-) {
-}
+) {}
 
 unsafe fn furi_create_thread(
     thread_name: String,
