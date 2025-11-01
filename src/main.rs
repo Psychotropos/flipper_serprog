@@ -30,7 +30,7 @@ struct SerprogData {
 }
 
 const RECORD_GUI: *const c_char = "gui\0".as_ptr();
-const RECORD_CLI: *const c_char = "cli\0".as_ptr();
+const RECORD_CLI_VCP: *const c_char = "cli_vcp\0".as_ptr();
 
 #[allow(dead_code, non_camel_case_types)]
 const S_ACK: u8 = 0x06;
@@ -178,13 +178,13 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
         config_callback: Some(vcp_on_line_config),
     };
 
-    furi_hal_spi_bus_handle_init(&mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle);
+    furi_hal_spi_bus_handle_init(&furi_hal_spi_bus_handle_external);
     furi_hal_usb_unlock();
 
     if USB_VCP_CHANNEL == 0 {
-        let cli = furi_record_open(RECORD_CLI) as *mut Cli;
-        cli_session_close(cli);
-        furi_record_close(RECORD_CLI);
+        let cli_vcp = furi_record_open(RECORD_CLI_VCP) as *mut CliVcp;
+        cli_vcp_disable(cli_vcp);
+        furi_record_close(RECORD_CLI_VCP);
     }
 
     if !furi_hal_usb_set_config(
@@ -273,9 +273,9 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     }
 
     if USB_VCP_CHANNEL == 0 {
-        let cli = furi_record_open(RECORD_CLI) as *mut Cli;
-        cli_session_open(cli, &mut cli_vcp as *mut CliSession as *mut c_void);
-        furi_record_close(RECORD_CLI);
+        let cli = furi_record_open(RECORD_CLI_VCP) as *mut CliVcp;
+        cli_vcp_enable(cli);
+        furi_record_close(RECORD_CLI_VCP);
     }
 
     furi_thread_flags_set(
@@ -291,9 +291,7 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     furi_stream_buffer_free(state.rx_stream);
     furi_stream_buffer_free(state.tx_stream);
 
-    furi_hal_spi_bus_handle_deinit(
-        &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
-    );
+    furi_hal_spi_bus_handle_deinit(&furi_hal_spi_bus_handle_external);
 
     view_port_enabled_set(state.view_port, false);
     gui_remove_view_port(gui, state.view_port);
@@ -305,7 +303,7 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     0
 }
 
-unsafe fn set_spi_baud_rate(handle: &mut FuriHalSpiBusHandle, prescaler_value: u32) {
+unsafe fn set_spi_baud_rate(handle: &FuriHalSpiBusHandle, prescaler_value: u32) {
     let bus = handle.bus.as_mut().unwrap();
     let spi = bus.spi.as_mut().unwrap();
     spi.CR1 = (spi.CR1 & !(CR1Bits::SPI_CR1_BR as u32)) | prescaler_value;
@@ -416,28 +414,26 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
                 data[0] = S_ACK;
                 signal_usb_cdc_send(&state, data.as_mut_ptr(), 1);
 
-                furi_hal_spi_acquire(
-                    &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
-                );
+                furi_hal_spi_acquire(&furi_hal_spi_bus_handle_external);
 
                 if state.prescaler_value != PrescalerValues::LL_SPI_BAUDRATEPRESCALER_DIV32 as u32 {
-                    set_spi_baud_rate(&mut furi_hal_spi_bus_handle_external, state.prescaler_value);
+                    set_spi_baud_rate(&furi_hal_spi_bus_handle_external, state.prescaler_value);
                 }
 
                 furi_hal_spi_bus_tx(
-                    &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
+                    &furi_hal_spi_bus_handle_external,
                     write_buffer.as_mut_ptr(),
                     write_length,
                     5000,
                 );
                 furi_hal_spi_bus_rx(
-                    &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
+                    &furi_hal_spi_bus_handle_external,
                     read_buffer.as_mut_ptr(),
                     read_length,
                     5000,
                 );
                 furi_hal_spi_release(
-                    &mut furi_hal_spi_bus_handle_external as *mut FuriHalSpiBusHandle,
+                    &furi_hal_spi_bus_handle_external,
                 );
 
                 let mut read_index = 0;
@@ -685,9 +681,9 @@ pub unsafe extern "C" fn vcp_on_cdc_rx(context: *mut c_void) {
     );
 }
 
-pub unsafe extern "C" fn vcp_state_callback(_context: *mut c_void, _state: u8) {}
+pub unsafe extern "C" fn vcp_state_callback(_context: *mut c_void, _state: CdcState) {}
 
-pub unsafe extern "C" fn vcp_on_cdc_control_line(_context: *mut c_void, _state: u8) {}
+pub unsafe extern "C" fn vcp_on_cdc_control_line(_context: *mut c_void, _state: CdcCtrlLine) {}
 
 pub unsafe extern "C" fn vcp_on_line_config(
     _context: *mut c_void,
