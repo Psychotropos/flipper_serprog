@@ -355,12 +355,13 @@ pub unsafe extern "C" fn draw_callback(canvas: *mut Canvas, _context: *mut c_voi
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_line(canvas, 8, 22, 120, 22);
 
-    canvas_draw_str(canvas, 12, 32, cstr!("PA6 -> MISO"));
-    canvas_draw_str(canvas, 12, 42, cstr!("PA7 -> MOSI"));
+    canvas_draw_str(canvas, 12, 32, cstr!("PA7 -> MOSI"));
+    canvas_draw_str(canvas, 12, 42, cstr!("PA6 -> MISO"));
     canvas_draw_str(canvas, 12, 52, cstr!("PA4 -> CS"));
 
-    canvas_draw_str(canvas, 72, 32, cstr!("PB3  -> SCK"));
-    canvas_draw_str(canvas, 72, 42, cstr!("3.3V -> VCC"));
+    canvas_draw_str(canvas, 72, 32, cstr!("PB3 -> SCK"));
+    canvas_draw_str(canvas, 72, 42, cstr!("3V3 -> VCC"));
+    canvas_draw_str(canvas, 72, 52, cstr!("GND -> GND"));
 
     canvas_draw_icon(canvas, 6, 54, &I_BACK_15X10);
     canvas_draw_str(canvas, 26, 60, cstr!("Exit"));
