@@ -423,7 +423,7 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
             SerprogCommands::S_CMD_O_SPIOP => {
                 if blocking_furi_stream_buffer_receive(
                     state.rx_stream,
-                    data.as_mut_ptr() as *mut c_void,
+                    data.as_mut_ptr(),
                     6,
                     10,
                 ) != 6
@@ -444,7 +444,7 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
 
                 if blocking_furi_stream_buffer_receive(
                     state.rx_stream,
-                    write_buffer.as_mut_ptr() as *mut c_void,
+                    write_buffer.as_mut_ptr(),
                     write_length,
                     1000,
                 ) != write_length
@@ -495,7 +495,7 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
             SerprogCommands::S_CMD_S_BUSTYPE => {
                 if blocking_furi_stream_buffer_receive(
                     state.rx_stream,
-                    data.as_mut_ptr() as *mut c_void,
+                    data.as_mut_ptr(),
                     1,
                     10,
                 ) != 1
@@ -514,7 +514,7 @@ unsafe fn usb_process_packet(state: &mut SerprogData) {
             SerprogCommands::S_CMD_S_SPI_FREQ => {
                 if blocking_furi_stream_buffer_receive(
                     state.rx_stream,
-                    data.as_mut_ptr() as *mut c_void,
+                    data.as_mut_ptr(),
                     4,
                     10,
                 ) != 4
@@ -581,25 +581,25 @@ unsafe fn signal_usb_cdc_send(state: &SerprogData, data: *mut u8, length: usize)
 
 unsafe fn blocking_furi_stream_buffer_receive(
     stream_buffer: *mut FuriStreamBuffer,
-    data: *mut c_void,
+    data: *mut u8,
     length: usize,
     timeout: usize,
 ) -> usize {
     let mut remaining = length;
     let mut index = 0;
 
-    let timer = furi_hal_cortex_timer_get(Duration::from_millis(timeout as u64).as_micros() as u32);
+    let timeout_micros = Duration::from_millis(timeout as u64).as_micros() as u32;
+    let timer = furi_hal_cortex_timer_get(timeout_micros);
 
     while remaining > 0 {
-        let timer_clone: FuriHalCortexTimer = transmute_copy(&timer);
-        if furi_hal_cortex_timer_is_expired(timer_clone) {
+        if furi_hal_cortex_timer_is_expired(timer) {
             furi_stream_buffer_reset(stream_buffer);
             return index;
         }
 
         let count = furi_stream_buffer_receive(
             stream_buffer,
-            data.add(index),
+            data.add(index) as *mut c_void,
             core::cmp::min(CDC_DATA_SZ, remaining),
             0,
         );
