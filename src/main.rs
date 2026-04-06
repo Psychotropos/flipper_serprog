@@ -10,7 +10,6 @@ extern crate flipperzero_rt;
 extern crate flipperzero_alloc;
 extern crate alloc;
 
-use alloc::string::String;
 use alloc::vec::Vec;
 use flipperzero_sys::*;
 use flipperzero_rt::{entry, manifest};
@@ -29,8 +28,14 @@ struct SerprogData {
     running: bool,
 }
 
-const RECORD_GUI: *const c_char = "gui\0".as_ptr();
-const RECORD_CLI_VCP: *const c_char = "cli_vcp\0".as_ptr();
+macro_rules! cstr {
+    ($s:literal) => {
+        concat!($s, "\0").as_ptr() as *const u8
+    };
+}
+
+const RECORD_GUI: *const c_char = cstr!("gui");
+const RECORD_CLI_VCP: *const c_char = cstr!("cli_vcp");
 
 #[allow(dead_code, non_camel_case_types)]
 const S_ACK: u8 = 0x06;
@@ -189,9 +194,9 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
 
     if !furi_hal_usb_set_config(
         if USB_VCP_CHANNEL == 0 {
-            &mut usb_cdc_single as *mut FuriHalUsbInterface
+            &raw mut usb_cdc_single
         } else {
-            &mut usb_cdc_dual as *mut FuriHalUsbInterface
+            &raw mut usb_cdc_dual
         },
         0 as *mut c_void,
     ) {
@@ -205,7 +210,7 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     );
 
     state.worker_thread = furi_create_thread(
-        "SerprogUsbProcThread\0".into(),
+        cstr!("SerprogUsbProcThread"),
         2048,
         &mut state as *mut SerprogData as *mut c_void,
         Some(usb_process_thread_callback),
@@ -213,7 +218,7 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
     );
 
     state.trx_thread = furi_create_thread(
-        "SerprogUsbTRxThread\0".into(),
+        cstr!("SerprogUsbTRxThread"),
         2048,
         &mut state as *mut SerprogData as *mut c_void,
         Some(usb_trx_thread_callback),
@@ -266,7 +271,7 @@ unsafe fn _entry(_args: Option<&CStr>) -> i32 {
 
     furi_hal_usb_unlock();
     if !furi_hal_usb_set_config(
-        &mut usb_cdc_single as *mut FuriHalUsbInterface,
+        &raw mut usb_cdc_single,
         0 as *mut c_void,
     ) {
         panic!("Failed to reset USB config on destruction");
@@ -320,8 +325,45 @@ pub unsafe extern "C" fn input_callback(
     );
 }
 
+const I_BACK_15X10_RAW: [u8; 21] = [
+    0x00, 0x04, 0x00, 0x06, 0x00, 0xFF, 0x0F, 0x06,
+    0x10, 0x04, 0x20, 0x00, 0x40, 0x00, 0x40, 0x00,
+    0x20, 0x00, 0x10, 0xFE, 0x0F,
+];
+
+const I_BACK_15X10: Icon = Icon {
+    width: 15,
+    height: 10,
+    frame_count: 1,
+    frame_rate: 0,
+    frames: [&I_BACK_15X10_RAW as *const u8].as_ptr(),
+};
+
 pub unsafe extern "C" fn draw_callback(canvas: *mut Canvas, _context: *mut c_void) {
-    canvas_draw_str(canvas, 39, 31, "SPI Flasher\0".as_ptr());
+    elements_bold_rounded_frame(canvas, 0, 0, 128, 64);
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(
+        canvas,
+        64,
+        10,
+        AlignCenter,
+        AlignTop,
+        cstr!("SPI Flasher"),
+    );
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_line(canvas, 8, 22, 120, 22);
+
+    canvas_draw_str(canvas, 12, 32, cstr!("PA6 -> MISO"));
+    canvas_draw_str(canvas, 12, 42, cstr!("PA7 -> MOSI"));
+    canvas_draw_str(canvas, 12, 52, cstr!("PA4 -> CS"));
+
+    canvas_draw_str(canvas, 72, 32, cstr!("PB3  -> SCK"));
+    canvas_draw_str(canvas, 72, 42, cstr!("3.3V -> VCC"));
+
+    canvas_draw_icon(canvas, 6, 54, &I_BACK_15X10);
+    canvas_draw_str(canvas, 26, 60, cstr!("Exit"));
 }
 
 unsafe fn usb_process_packet(state: &mut SerprogData) {
@@ -691,16 +733,15 @@ pub unsafe extern "C" fn vcp_on_line_config(
 ) {}
 
 unsafe fn furi_create_thread(
-    thread_name: String,
+    thread_name: *const u8,
     stack_size: usize,
     context: *mut c_void,
     callback: FuriThreadCallback,
     start_immediately: bool,
 ) -> *mut FuriThread {
-    let c_thread_name: &CStr = &CStr::from_bytes_with_nul(thread_name.as_bytes()).unwrap();
     let thread = furi_thread_alloc();
 
-    furi_thread_set_name(thread, c_thread_name.as_ptr());
+    furi_thread_set_name(thread, thread_name);
     furi_thread_set_stack_size(thread, stack_size);
     furi_thread_set_context(thread, context);
     furi_thread_set_callback(thread, callback);
